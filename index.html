@@ -42,10 +42,13 @@
 		}
 		
 		.grid span {
-			display: inline-block;
-			padding: 0px 0 2px;
+			display: inline-flex;
+			justify-content: center;
+			align-items: center;
 			cursor: pointer;
 			user-select: none;
+			width: 4rem;
+			height: 4rem;
 		}
 		
 		.grid span:hover {
@@ -55,11 +58,29 @@
 	</style>
 </head>
 <body>
+	<div>
+		<input type="number" name="columns" value="7" onchange="setCols(event.target.value)" />
+		<input type="number" name="rows" value="4" onchange="setRows(event.target.value)" />
+	</div>
 	<script type="text/javascript">
-		const empty = '⚫';
-		const colors = '⚫ ⚫ 🟠 🟣 🔵 🟤 🟡 🟢 🔴'.split(' ');
-		const col = 7;
-		const row = 4;
+		const empty = '⚪';
+		const colors = '⚪ ⚫ 🟠 🟣 🔵 🟤 🟡 🟢 🔴'.split(' ');
+		let col = 7;
+		let row = 4;
+		
+		const colorEmojis = {};
+		{
+			let c = 0;
+			colorEmojis['white'] = colors[c++];
+			colorEmojis['black'] = colors[c++];
+			colorEmojis['orange'] = colors[c++];
+			colorEmojis['purple'] = colors[c++];
+			colorEmojis['blue'] = colors[c++];
+			colorEmojis['brown'] = colors[c++];
+			colorEmojis['yellow'] = colors[c++];
+			colorEmojis['green'] = colors[c++];
+			colorEmojis['red'] = colors[c++];
+		}
 		
 		const grid = document.createElement('div');
 		grid.classList.add('grid');
@@ -75,22 +96,61 @@
 			textarea.select();
 			document.execCommand('copy');
 			document.body.removeChild(textarea);
-			console.log('????', textarea.value);
 		};
 		
-		for (let r = 0; r < row; ++r) {
-			const rowElem = document.createElement('div');
-			for (let c = 0; c < col; ++c) {
-				const colElem = document.createElement('span');
-				colElem.textContent = empty;
-				rowElem.appendChild(colElem);
-				colElem.onclick = e => {
-					colElem.textContent = current;
-					copyToClipboard();
-				};
+		const onPaste = e => {
+			e.stopPropagation();
+			e.preventDefault();
+			
+			const clipboardData = e.clipboardData || window.clipboardData;
+			let pastedData = clipboardData.getData('Text');
+			
+			Object.entries(colorEmojis).forEach(([key, emoji]) => {
+				const regex = new RegExp(`:${key}_circle:`, 'g');
+				pastedData = pastedData.replace(regex, emoji + ' ');
+			});
+			
+			const regex = /(?:[\u2700-\u27bf]|(?:\ud83c[\udde6-\uddff]){2}|[\ud800-\udbff][\udc00-\udfff]|[\u0023-\u0039]\ufe0f?\u20e3|\u3299|\u3297|\u303d|\u3030|\u24c2|\ud83c[\udd70-\udd71]|\ud83c[\udd7e-\udd7f]|\ud83c\udd8e|\ud83c[\udd91-\udd9a]|\ud83c[\udde6-\uddff]|\ud83c[\ude01-\ude02]|\ud83c\ude1a|\ud83c\ude2f|\ud83c[\ude32-\ude3a]|\ud83c[\ude50-\ude51]|\u203c|\u2049|[\u25aa-\u25ab]|\u25b6|\u25c0|[\u25fb-\u25fe]|\u00a9|\u00ae|\u2122|\u2139|\ud83c\udc04|[\u2600-\u26FF]|\u2b05|\u2b06|\u2b07|\u2b1b|\u2b1c|\u2b50|\u2b55|\u231a|\u231b|\u2328|\u23cf|[\u23e9-\u23f3]|[\u23f8-\u23fa]|\ud83c\udccf|\u2934|\u2935|[\u2190-\u21ff])/g;
+			
+			const rows = pastedData.split(/[\r\n]+/g).map(r => {
+				return r.split(' ').filter(v => v !== '');
+			});
+			col = rows[0].length;
+			row = rows.length;
+			generateGrid();
+			
+			rows.forEach((r, i) => {
+				const elemRow = document.querySelectorAll('.grid div')[i];
+				const rr = [...r];
+				elemRow.querySelectorAll('span').forEach((c, ci) => {
+					elemRow.querySelectorAll('span')[ci].textContent = rr[ci];
+				});
+			});
+		};
+		
+		document.addEventListener('paste', onPaste);
+		
+		const generateGrid = () => {
+			while (grid.firstChild) {
+				grid.removeChild(grid.firstChild);
 			}
-			grid.appendChild(rowElem);
-		}
+			
+			for (let r = 0; r < row; ++r) {
+				const rowElem = document.createElement('div');
+				for (let c = 0; c < col; ++c) {
+					const colElem = document.createElement('span');
+					colElem.textContent = empty;
+					rowElem.appendChild(colElem);
+					colElem.onclick = e => {
+						colElem.textContent = current;
+						copyToClipboard();
+					};
+				}
+				grid.appendChild(rowElem);
+			}
+		};
+		
+		generateGrid();
 		
 		document.body.appendChild(grid);
 		
@@ -114,6 +174,16 @@
 				elem.classList.add('selected');
 			}
 		});
+		
+		const setRows = rowCount => {
+			row = +rowCount;
+			generateGrid();
+		};
+		
+		const setCols = colCount => {
+			col = +colCount;
+			generateGrid();
+		};
 		
 		document.body.appendChild(options);
 	</script>
